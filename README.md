@@ -13,3 +13,9 @@ This repository contains code and data for a CS471 research project on predictin
 ## Notes
 
 Initial commit intentionally excludes generated output folders and preliminary result logs. Those can be added in later commits after the experiment setup is finalized.
+
+## Related Work
+
+This project was influenced by the following MoonBoardRNN work:
+
+- Yi-Shiou Duh and Ray Chang. "Recurrent Neural Network for MoonBoard Climbing Route Classification and Generation." arXiv:2102.01788, 2021. https://arxiv.org/abs/2102.01788

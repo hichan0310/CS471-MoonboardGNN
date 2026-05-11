@@ -60,3 +60,9 @@ MoonBoardRNN's saved `GradeNet.ipynb` output reports the following test metrics:
 - macro-F1: approximately `0.2546`
 
 Current GNN results should be compared against this baseline with care because the input representation and training schedule are different.
+
+## Related Work
+
+This project was influenced by:
+
+- Yi-Shiou Duh and Ray Chang. "Recurrent Neural Network for MoonBoard Climbing Route Classification and Generation." arXiv:2102.01788, 2021. https://arxiv.org/abs/2102.01788
