@@ -51,6 +51,36 @@ The main run uses:
 
 This matches the dataset scale reported in MoonBoardRNN's GradeNet notebook, while using graph input instead of BetaMove-generated sequence input.
 
+## Experiment Variables
+
+The primary experiments fix GAT as the graph encoder and compare graph representations through node-feature and edge-construction ablations.
+
+### Node Features
+
+- `xy`: normalized hold position.
+- `type`: `xy` plus start/middle/end hold type.
+- `direction`: `type` plus MoonBoard 2016 hold direction vector.
+- `difficulty`: `type` plus left/right hand hold difficulty scores from MoonBoardRNN.
+- `difficulty_direction`: `difficulty` plus hold direction vector.
+
+Order-augmented variants are also implemented: `type_order`, `direction_order`, `difficulty_order`, and `difficulty_direction_order`.
+
+Difficulty-score features are treated as auxiliary features because their provenance is less clear than the raw hold configuration. Results should be interpreted separately for models with and without these features.
+
+### Edge Construction
+
+- `spatial`: connect holds within a normalized reachability threshold.
+- `sequence`: connect adjacent holds in the stored hold order.
+- `hybrid`: combine spatial and sequence-adjacent edges.
+
+The `spatial` graph is the main formulation. `sequence` and `hybrid` are ablations because the stored middle-hold order may not always be a reliable climbing sequence.
+
+### Main Comparison
+
+The intended comparison is:
+
+> With the same GAT encoder, which node feature set and edge construction method produce the most useful graph embedding for MoonBoard grade prediction?
+
 ## Reported Baseline
 
 MoonBoardRNN's saved `GradeNet.ipynb` output reports the following test metrics:
