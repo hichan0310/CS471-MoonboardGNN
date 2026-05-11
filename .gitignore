@@ -1,0 +1,15 @@
+# Experiment outputs and caches
+outputs*/
+__pycache__/
+*.pyc
+
+# Local experiment logs/summaries not included in initial commit
+EXPERIMENT_LOG.md
+experiment_summary.csv
+experiment_summary_preliminary.csv
+
+# Notebook/runtime noise
+.ipynb_checkpoints/
+
+# Local archives
+*.zip
