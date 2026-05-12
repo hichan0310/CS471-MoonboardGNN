@@ -52,6 +52,18 @@ Risk:
 
 This is the most reasonable next training-method improvement because MoonBoardRNN GradeNet also used class weights.
 
+Implementation note:
+
+- `run_moonboard_gnn.py` and the notebooks support `class_weight_mode`.
+- `none` keeps the original unweighted cross entropy.
+- `balanced` computes weights from the training split only:
+
+```text
+weight[class] = number_of_training_samples / (number_of_present_classes * class_count)
+```
+
+The current class-weighting notebook runs the same `difficulty_direction + spatial + GAT` setting twice, once with `none` and once with `balanced`, then saves `outputs_class_weighting/class_weighting_summary.json` and plots the two results against the majority baseline and reported MoonBoardRNN GradeNet metrics.
+
 ## Ordinal Loss
 
 MoonBoard grades are ordered labels, not purely nominal labels:

@@ -62,6 +62,19 @@ The main interpretation should answer:
 
 > With the same GAT encoder, which node feature set and edge construction method produce the most useful graph embedding for MoonBoard grade prediction?
 
+## Running the Class-Weighting Notebook
+
+The current notebook default is a class-weighting comparison. In Colab or Jupyter, run all cells to train the same `difficulty_direction + spatial + GAT` model twice:
+
+- `unweighted`: original cross entropy loss.
+- `class_weighted`: balanced cross entropy using weights computed from the training split.
+
+The notebook saves results under `outputs_class_weighting/` and displays:
+
+- per-epoch loss and validation metrics,
+- unweighted vs. class-weighted test metrics,
+- majority baseline and reported MoonBoardRNN GradeNet reference lines.
+
 ## Notes
 
 Initial commit intentionally excludes generated output folders and preliminary result logs. Those can be added in later commits after the experiment setup is finalized.

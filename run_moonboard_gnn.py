@@ -525,6 +525,18 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> dict
     return {"exact_acc": exact, "relaxed_acc": relaxed, "macro_f1": macro_f1}
 
 
+def compute_class_weights(labels: list[int], num_classes: int, mode: str) -> torch.Tensor | None:
+    if mode == "none":
+        return None
+    counts = np.bincount(np.array(labels, dtype=np.int64), minlength=num_classes).astype(np.float32)
+    present = counts > 0
+    if mode == "balanced":
+        weights = np.zeros(num_classes, dtype=np.float32)
+        weights[present] = len(labels) / (float(present.sum()) * counts[present])
+        return torch.tensor(weights, dtype=torch.float32)
+    raise ValueError(f"unknown class weight mode: {mode}")
+
+
 def train_model(
     model: nn.Module,
     train_loader: DataLoader,
@@ -533,9 +545,12 @@ def train_model(
     epochs: int,
     lr: float,
     device: torch.device,
+    class_weights: torch.Tensor | None = None,
 ) -> tuple[dict[str, float], list[dict[str, float]]]:
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
-    criterion = nn.CrossEntropyLoss()
+    if class_weights is not None:
+        class_weights = class_weights.to(device)
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
     history = []
     best_val = -1.0
     best_state = None
@@ -628,6 +643,7 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--hidden", type=int, default=64)
     parser.add_argument("--lr", type=float, default=0.005)
+    parser.add_argument("--class-weight-mode", choices=["none", "balanced"], default="none")
     parser.add_argument("--seed", type=int, default=471)
     args = parser.parse_args()
 
@@ -678,6 +694,7 @@ def main() -> None:
     num_classes = max(labels) + 1
     model = make_model(args.model, in_channels, args.hidden, num_classes)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    class_weights = compute_class_weights([labels[i] for i in train_idx], num_classes, args.class_weight_mode)
 
     majority = majority_baseline([labels[i] for i in train_idx], [labels[i] for i in test_idx])
     print("config:", vars(args))
@@ -685,6 +702,8 @@ def main() -> None:
     print("num problems:", len(problems))
     print("label distribution:", dict(sorted(Counter(labels).items())))
     print("node features:", in_channels)
+    if class_weights is not None:
+        print("class weights:", [round(float(v), 4) for v in class_weights.tolist()])
     print("majority baseline:", majority)
 
     test_metrics, history = train_model(
@@ -695,6 +714,7 @@ def main() -> None:
         epochs=args.epochs,
         lr=args.lr,
         device=device,
+        class_weights=class_weights,
     )
 
     runtime = time.perf_counter() - total_start
@@ -704,6 +724,8 @@ def main() -> None:
         "num_problems": len(problems),
         "label_distribution": dict(sorted(Counter(labels).items())),
         "node_features": in_channels,
+        "class_weight_mode": args.class_weight_mode,
+        "class_weights": None if class_weights is None else [float(v) for v in class_weights.tolist()],
         "majority_baseline": majority,
         "test_metrics": test_metrics,
     }
