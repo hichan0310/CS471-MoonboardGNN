@@ -66,6 +66,8 @@ The main interpretation should answer:
 
 Initial commit intentionally excludes generated output folders and preliminary result logs. Those can be added in later commits after the experiment setup is finalized.
 
+For notes on possible training-method improvements such as class weighting, ordinal loss, and rare-class handling, see `docs/model_improvement_notes.md`.
+
 ## Related Work
 
 This project was influenced by the following MoonBoardRNN work:

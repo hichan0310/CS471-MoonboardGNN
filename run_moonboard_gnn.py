@@ -20,6 +20,11 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GATConv, GCNConv, SAGEConv, global_max_pool
 
+try:
+    from tqdm import tqdm
+except Exception:
+    tqdm = None
+
 
 GRADE_MAP = {
     "6B": 0,
@@ -536,7 +541,10 @@ def train_model(
     best_state = None
 
     model.to(device)
-    for epoch in range(1, epochs + 1):
+    epoch_iter = range(1, epochs + 1)
+    if tqdm is not None:
+        epoch_iter = tqdm(epoch_iter, total=epochs, unit="epoch", desc="Training", dynamic_ncols=True)
+    for epoch in epoch_iter:
         model.train()
         total_loss = 0.0
         for batch in train_loader:
@@ -556,12 +564,16 @@ def train_model(
             best_val = val_metrics["relaxed_acc"]
             best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
 
-        print(
-            f"epoch={epoch:03d} loss={train_loss:.4f} "
-            f"val_exact={val_metrics['exact_acc']:.4f} "
-            f"val_relaxed={val_metrics['relaxed_acc']:.4f} "
-            f"val_macro_f1={val_metrics['macro_f1']:.4f}"
+        progress_text = (
+            f"loss {train_loss:.4f}, "
+            f"val_exact {val_metrics['exact_acc']:.4f}, "
+            f"val_+/-1 {val_metrics['relaxed_acc']:.4f}, "
+            f"val_f1 {val_metrics['macro_f1']:.4f}"
         )
+        if tqdm is not None and hasattr(epoch_iter, "set_description"):
+            epoch_iter.set_description(progress_text)
+        else:
+            print(f"epoch={epoch:03d} {progress_text}")
 
     if best_state is not None:
         model.load_state_dict(best_state)

@@ -1,5 +1,6 @@
 # Experiment outputs and caches
 outputs*/
+run_result*/
 __pycache__/
 *.pyc
 
