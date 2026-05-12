@@ -1,0 +1,59 @@
+{
+  "config": {
+    "dataset": "all",
+    "max_samples": 25096,
+    "split_mode": "fixed_size",
+    "feature_set": "direction",
+    "edge_mode": "spatial",
+    "order_mode": "source",
+    "model": "gat",
+    "train_size": 20157,
+    "val_size": 2442,
+    "test_size": 2497,
+    "reach_threshold": 0.4,
+    "epochs": 20,
+    "batch_size": 128,
+    "hidden": 64,
+    "lr": 0.005,
+    "seed": 471
+  },
+  "runtime_seconds": 212.9131571989999,
+  "split_sizes": {
+    "train": 20157,
+    "val": 2442,
+    "test": 2497
+  },
+  "num_problems": 25096,
+  "label_distribution": {
+    "0": 8335,
+    "1": 6905,
+    "2": 3311,
+    "3": 2532,
+    "4": 2625,
+    "5": 877,
+    "6": 305,
+    "7": 141,
+    "8": 41,
+    "9": 24
+  },
+  "node_features": 7,
+  "majority_baseline": {
+    "exact_acc": 0.3319983980776932,
+    "relaxed_acc": 0.6071285542651181,
+    "macro_f1": 0.049849669272399276
+  },
+  "test_metrics": {
+    "exact_acc": 0.41409691629955947,
+    "relaxed_acc": 0.749699639567481,
+    "macro_f1": 0.13863646613280955
+  },
+  "moonboardrnn_reported_baseline": {
+    "source": "MoonBoardRNN/model/GradeNet.ipynb saved outputs",
+    "train_size": 20157,
+    "dev_size": 2442,
+    "test_size": 2497,
+    "test_exact_acc": 0.46655987184621545,
+    "test_plus_minus_1_acc": 0.8474169002803364,
+    "test_macro_f1": 0.2546
+  }
+}
