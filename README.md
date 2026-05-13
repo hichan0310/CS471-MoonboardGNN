@@ -89,6 +89,15 @@ Initial commit intentionally excludes generated output folders and preliminary r
 
 For notes on possible training-method improvements such as class weighting, ordinal loss, and rare-class handling, see `docs/model_improvement_notes.md`.
 
+## Experiment Run Logs
+
+Detailed experiment notes are stored under `run_logs/`:
+
+- `run_logs/2026-05-11_main_gat_difficulty_direction_spatial.md`
+- `run_logs/2026-05-12_main_scale_ablation.md`
+- `run_logs/2026-05-12_class_weighting.md`
+- `run_logs/2026-05-13_balanced_replacement_sampling.md`
+
 ## Related Work
 
 This project was influenced by the following MoonBoardRNN work:
