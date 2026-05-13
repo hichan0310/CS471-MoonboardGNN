@@ -534,6 +534,12 @@ def compute_class_weights(labels: list[int], num_classes: int, mode: str) -> tor
         weights = np.zeros(num_classes, dtype=np.float32)
         weights[present] = len(labels) / (float(present.sum()) * counts[present])
         return torch.tensor(weights, dtype=torch.float32)
+    if mode == "moonboardrnn_v1":
+        weights = [1, 1, 2, 2, 1, 4, 2, 4, 8, 8]
+        return torch.tensor(weights[:num_classes], dtype=torch.float32)
+    if mode == "moonboardrnn_v2":
+        weights = [1, 1, 2, 4, 1, 4, 8, 8, 8, 8]
+        return torch.tensor(weights[:num_classes], dtype=torch.float32)
     raise ValueError(f"unknown class weight mode: {mode}")
 
 
@@ -643,7 +649,11 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--hidden", type=int, default=64)
     parser.add_argument("--lr", type=float, default=0.005)
-    parser.add_argument("--class-weight-mode", choices=["none", "balanced"], default="none")
+    parser.add_argument(
+        "--class-weight-mode",
+        choices=["none", "balanced", "moonboardrnn_v1", "moonboardrnn_v2"],
+        default="none",
+    )
     parser.add_argument("--seed", type=int, default=471)
     args = parser.parse_args()
 
