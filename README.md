@@ -66,12 +66,14 @@ The main interpretation should answer:
 
 The current notebook uses one `EXPERIMENTS` list as the only experiment coverage definition. In Colab or Jupyter, run all cells to execute every listed case and generate the summary table and plots.
 
-The default list is a class-weighting comparison for the same `difficulty_direction + spatial + GAT` model:
+The default list compares imbalance-handling strategies for the same `difficulty_direction + spatial + GAT` model:
 
 - `unweighted`: original cross entropy loss.
 - `class_weighted`: balanced cross entropy using weights computed from the training split.
+- `moonboardrnn_v1` / `moonboardrnn_v2`: hand-tuned class weights used as MoonBoardRNN-inspired settings.
+- `balanced_replacement`: MoonGen-style train-set sampling with replacement, using `train_samples_per_class`.
 
-To run feature/edge ablations, edit `EXPERIMENTS` instead of using a separate ablation cell.
+To run feature/edge ablations or change the sampling coverage, edit `EXPERIMENTS` instead of using a separate ablation cell.
 
 The notebook saves results under `outputs_experiments/` and displays:
 
@@ -79,11 +81,22 @@ The notebook saves results under `outputs_experiments/` and displays:
 - test metric comparisons across all listed experiments,
 - majority baseline and reported MoonBoardRNN GradeNet reference lines.
 
+Each `result.json` stores the default test metrics selected by validation `+/-1` accuracy and `test_metrics_by_selection`, which also includes the checkpoint selected by validation macro-F1.
+
 ## Notes
 
 Initial commit intentionally excludes generated output folders and preliminary result logs. Those can be added in later commits after the experiment setup is finalized.
 
 For notes on possible training-method improvements such as class weighting, ordinal loss, and rare-class handling, see `docs/model_improvement_notes.md`.
+
+## Experiment Run Logs
+
+Detailed experiment notes are stored under `run_logs/`:
+
+- `run_logs/2026-05-11_main_gat_difficulty_direction_spatial.md`
+- `run_logs/2026-05-12_main_scale_ablation.md`
+- `run_logs/2026-05-12_class_weighting.md`
+- `run_logs/2026-05-13_balanced_replacement_sampling.md`
 
 ## Related Work
 

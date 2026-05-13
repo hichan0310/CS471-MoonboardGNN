@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn.functional as F
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_recall_fscore_support
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch_geometric.data import Data
@@ -509,7 +509,12 @@ def make_model(model_name: str, in_channels: int, hidden_channels: int, num_clas
     raise ValueError(f"unknown model: {model_name}")
 
 
-def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> dict[str, float]:
+def evaluate(
+    model: nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    num_classes: int,
+) -> dict[str, object]:
     model.eval()
     y_true: list[int] = []
     y_pred: list[int] = []
@@ -520,9 +525,34 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> dict
             y_true.extend(batch.y.cpu().tolist())
             y_pred.extend(pred.cpu().tolist())
     exact = accuracy_score(y_true, y_pred)
-    relaxed = float(np.mean(np.abs(np.array(y_true) - np.array(y_pred)) <= 1))
+    y_true_array = np.array(y_true)
+    y_pred_array = np.array(y_pred)
+    relaxed = float(np.mean(np.abs(y_true_array - y_pred_array) <= 1))
     macro_f1 = f1_score(y_true, y_pred, average="macro", zero_division=0)
-    return {"exact_acc": exact, "relaxed_acc": relaxed, "macro_f1": macro_f1}
+    labels = list(range(num_classes))
+    precision, recall, f1, support = precision_recall_fscore_support(
+        y_true,
+        y_pred,
+        labels=labels,
+        zero_division=0,
+    )
+    per_class = {
+        str(label): {
+            "precision": float(precision[label]),
+            "recall": float(recall[label]),
+            "f1": float(f1[label]),
+            "support": int(support[label]),
+        }
+        for label in labels
+    }
+    matrix = confusion_matrix(y_true, y_pred, labels=labels).astype(int).tolist()
+    return {
+        "exact_acc": exact,
+        "relaxed_acc": relaxed,
+        "macro_f1": macro_f1,
+        "per_class": per_class,
+        "confusion_matrix": matrix,
+    }
 
 
 def compute_class_weights(labels: list[int], num_classes: int, mode: str) -> torch.Tensor | None:
@@ -551,15 +581,16 @@ def train_model(
     epochs: int,
     lr: float,
     device: torch.device,
+    num_classes: int,
     class_weights: torch.Tensor | None = None,
-) -> tuple[dict[str, float], list[dict[str, float]]]:
+) -> tuple[dict[str, object], list[dict[str, float]], dict[str, dict[str, object]]]:
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
     if class_weights is not None:
         class_weights = class_weights.to(device)
     criterion = nn.CrossEntropyLoss(weight=class_weights)
     history = []
-    best_val = -1.0
-    best_state = None
+    best_scores = {"relaxed_acc": -1.0, "macro_f1": -1.0}
+    best_states = {"relaxed_acc": None, "macro_f1": None}
 
     model.to(device)
     epoch_iter = range(1, epochs + 1)
@@ -578,29 +609,35 @@ def train_model(
             total_loss += float(loss.item()) * batch.num_graphs
 
         train_loss = total_loss / len(train_loader.dataset)
-        val_metrics = evaluate(model, val_loader, device)
-        row = {"epoch": epoch, "loss": train_loss, **{f"val_{k}": v for k, v in val_metrics.items()}}
+        val_metrics = evaluate(model, val_loader, device, num_classes)
+        val_summary = {k: val_metrics[k] for k in ("exact_acc", "relaxed_acc", "macro_f1")}
+        row = {"epoch": epoch, "loss": train_loss, **{f"val_{k}": v for k, v in val_summary.items()}}
         history.append(row)
-        if val_metrics["relaxed_acc"] > best_val:
-            best_val = val_metrics["relaxed_acc"]
-            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+        for metric_name in best_scores:
+            if float(val_summary[metric_name]) > best_scores[metric_name]:
+                best_scores[metric_name] = float(val_summary[metric_name])
+                best_states[metric_name] = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
 
         progress_text = (
             f"loss {train_loss:.4f}, "
-            f"val_exact {val_metrics['exact_acc']:.4f}, "
-            f"val_+/-1 {val_metrics['relaxed_acc']:.4f}, "
-            f"val_f1 {val_metrics['macro_f1']:.4f}"
+            f"val_exact {val_summary['exact_acc']:.4f}, "
+            f"val_+/-1 {val_summary['relaxed_acc']:.4f}, "
+            f"val_f1 {val_summary['macro_f1']:.4f}"
         )
         if tqdm is not None and hasattr(epoch_iter, "set_description"):
             epoch_iter.set_description(progress_text)
         else:
             print(f"epoch={epoch:03d} {progress_text}")
 
-    if best_state is not None:
-        model.load_state_dict(best_state)
-        model.to(device)
-    test_metrics = evaluate(model, test_loader, device)
-    return test_metrics, history
+    test_metrics_by_selection = {}
+    for metric_name, state in best_states.items():
+        if state is not None:
+            model.load_state_dict(state)
+            model.to(device)
+        test_metrics_by_selection[metric_name] = evaluate(model, test_loader, device, num_classes)
+
+    test_metrics = test_metrics_by_selection["relaxed_acc"]
+    return test_metrics, history, test_metrics_by_selection
 
 
 def majority_baseline(labels: list[int], test_labels: list[int]) -> dict[str, float]:
@@ -612,6 +649,34 @@ def majority_baseline(labels: list[int], test_labels: list[int]) -> dict[str, fl
         "relaxed_acc": float(np.mean(np.abs(pred - true) <= 1)),
         "macro_f1": f1_score(true, pred, average="macro", zero_division=0),
     }
+
+
+def sample_train_indices(
+    labels: list[int],
+    train_idx: np.ndarray,
+    mode: str,
+    samples_per_class: int,
+    seed: int,
+) -> np.ndarray:
+    if mode == "none":
+        return train_idx
+    if mode != "balanced_replacement":
+        raise ValueError(f"unknown train sampling mode: {mode}")
+
+    rng = np.random.default_rng(seed)
+    by_class: dict[int, list[int]] = {}
+    for idx in train_idx:
+        by_class.setdefault(labels[int(idx)], []).append(int(idx))
+
+    if samples_per_class <= 0:
+        samples_per_class = max(len(indices) for indices in by_class.values())
+
+    sampled: list[int] = []
+    for label in sorted(by_class):
+        pool = np.array(by_class[label], dtype=np.int64)
+        sampled.extend(rng.choice(pool, size=samples_per_class, replace=True).tolist())
+    rng.shuffle(sampled)
+    return np.array(sampled, dtype=np.int64)
 
 
 def write_json(path: Path, value) -> None:
@@ -649,6 +714,8 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--hidden", type=int, default=64)
     parser.add_argument("--lr", type=float, default=0.005)
+    parser.add_argument("--train-sampling-mode", choices=["none", "balanced_replacement"], default="none")
+    parser.add_argument("--train-samples-per-class", type=int, default=2000)
     parser.add_argument(
         "--class-weight-mode",
         choices=["none", "balanced", "moonboardrnn_v1", "moonboardrnn_v2"],
@@ -678,6 +745,14 @@ def main() -> None:
         random_state=args.seed,
         stratify=[labels[i] for i in train_val_idx],
     )
+    train_idx_original = np.array(train_idx, dtype=np.int64)
+    train_idx = sample_train_indices(
+        labels=labels,
+        train_idx=train_idx_original,
+        mode=args.train_sampling_mode,
+        samples_per_class=args.train_samples_per_class,
+        seed=args.seed,
+    )
 
     graphs = [
         problem_to_graph(
@@ -706,17 +781,19 @@ def main() -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     class_weights = compute_class_weights([labels[i] for i in train_idx], num_classes, args.class_weight_mode)
 
-    majority = majority_baseline([labels[i] for i in train_idx], [labels[i] for i in test_idx])
+    majority = majority_baseline([labels[i] for i in train_idx_original], [labels[i] for i in test_idx])
     print("config:", vars(args))
     print("device:", device)
     print("num problems:", len(problems))
     print("label distribution:", dict(sorted(Counter(labels).items())))
+    print("original train label distribution:", dict(sorted(Counter(labels[i] for i in train_idx_original).items())))
+    print("effective train label distribution:", dict(sorted(Counter(labels[i] for i in train_idx).items())))
     print("node features:", in_channels)
     if class_weights is not None:
         print("class weights:", [round(float(v), 4) for v in class_weights.tolist()])
     print("majority baseline:", majority)
 
-    test_metrics, history = train_model(
+    test_metrics, history, test_metrics_by_selection = train_model(
         model=model,
         train_loader=train_loader,
         val_loader=val_loader,
@@ -724,6 +801,7 @@ def main() -> None:
         epochs=args.epochs,
         lr=args.lr,
         device=device,
+        num_classes=num_classes,
         class_weights=class_weights,
     )
 
@@ -733,16 +811,22 @@ def main() -> None:
         "runtime_seconds": runtime,
         "num_problems": len(problems),
         "label_distribution": dict(sorted(Counter(labels).items())),
+        "original_train_size": int(len(train_idx_original)),
+        "effective_train_size": int(len(train_idx)),
+        "original_train_label_distribution": dict(sorted(Counter(labels[i] for i in train_idx_original).items())),
+        "effective_train_label_distribution": dict(sorted(Counter(labels[i] for i in train_idx).items())),
         "node_features": in_channels,
         "class_weight_mode": args.class_weight_mode,
         "class_weights": None if class_weights is None else [float(v) for v in class_weights.tolist()],
         "majority_baseline": majority,
         "test_metrics": test_metrics,
+        "test_metrics_by_selection": test_metrics_by_selection,
     }
     write_json(args.output_dir / "result.json", result)
     write_json(args.output_dir / "history.json", history)
 
-    print("test metrics:", test_metrics)
+    print("test metrics selected by val +/-1:", test_metrics)
+    print("test metrics by selection:", test_metrics_by_selection)
     print(f"runtime seconds: {runtime:.3f}")
     print(f"saved: {args.output_dir / 'result.json'}")
 
