@@ -1,0 +1,281 @@
+# 포스터 작성을 위한 연구 내용 정리
+
+- 이후 포스터 작성 시에 이 내용을 토대로 할 것.
+- 사고 과정과 모델 학습 / 평가를 어떤 순서로 고도화했는지 정리하는 문서.
+
+## 1. 기존 연구
+
+MoonBoard 문제와 그 난이도를 추측하는 모델을 만드려는 시도로 두 가지 선행연구가 확인됨.
+
+### 1.1 MoonBoardRNN
+
+- Yi-Shiou Duh and Ray Chang. *Recurrent Neural Network for MoonBoard Climbing Route Classification and Generation*, 2021.
+- Repository: `MoonBoardRNN`
+
+MoonBoardRNN은 MoonBoard 문제를 바로 분류하지 않고, 먼저 `BetaMove`라는 전처리 단계를 사용한다. `BetaMove`는 정적인 hold configuration을 사람이 실제로 등반할 법한 move sequence로 변환한다. 이후 `GradeNet`이 이 sequence를 입력으로 받아 난이도를 예측한다.
+
+GradeNet의 입력은 다음과 같은 형태이다.
+
+```text
+X: (num_problems, 12, 22)
+```
+
+- 최대 12개의 move를 사용함.
+- 각 move는 22차원 feature vector로 표현됨.
+- 짧은 sequence는 zero padding 후 masking 처리됨.
+
+각 move feature에는 다음 정보가 포함된다.
+
+- target hold 위치
+- target hand
+- target hold difficulty
+- remaining hold 위치와 difficulty
+- moving hold 위치와 difficulty
+- moving/remaining hold에서 target hold까지의 상대 벡터
+- foot placement 관련 feature
+- move success rate
+
+즉 MoonBoardRNN은 단순히 hold list의 순서를 RNN에 넣은 모델이 아니다. `BetaMove`가 추정한 손 이동 sequence와 move-level engineered feature를 이용한다. 이 점에서 sequence 정보를 강하게 활용하는 모델이라고 볼 수 있다.
+
+장점:
+
+- 등반이 본질적으로 순차적이라는 점을 직접 반영함.
+- hand movement, relative distance, foot placement, move success rate 등 물리적/동작적 정보를 많이 사용함.
+- reported GradeNet 성능이 현재 GNN 실험보다 특히 `+/-1 accuracy`와 macro-F1에서 높음.
+
+한계:
+
+- `BetaMove`가 생성한 sequence의 품질에 의존함.
+- 전처리와 feature engineering이 복잡함.
+- 각 문제를 graph로 직접 모델링하지는 않음.
+
+### 1.2 MoonBoard TextGCN / moonGen
+
+- Cheng-Hao Tai, Aaron Wu, Rafael Hinojosa. *Graph Neural Networks in Classifying Rock Climbing Difficulties*.
+- Repository: `gestalt-howard/moonGen`
+- Local report: `moonGNN.pdf`
+
+moonGen은 MoonBoard 문제를 NLP의 document classification 문제처럼 해석한다. 문제는 document, hold는 word에 대응된다. 전체 dataset을 하나의 heterogeneous graph로 만들고, GCN을 이용해 problem node의 grade를 예측한다.
+
+그래프 구조:
+
+```text
+node type 1: problem node
+node type 2: hold node
+```
+
+edge 정의:
+
+- problem-hold edge: 해당 problem이 특정 hold를 포함하면 연결
+- weighted version에서는 problem-hold edge에 TF-IDF 사용
+- hold-hold edge: corpus 안에서 hold들이 같이 등장하는 정도로 연결
+- weighted version에서는 hold-hold edge에 PMI 사용
+
+feature:
+
+- one-hot node feature
+- multi-hot hold-presence feature
+
+이 접근은 TextGCN의 구조를 MoonBoard에 적용한 것이다. 즉 한 문제 내부의 물리적 reachability를 보는 것이 아니라, 전체 corpus에서 problem과 hold가 어떻게 함께 등장하는지를 이용한다.
+
+장점:
+
+- 전체 dataset을 하나의 graph로 보고 label/feature information을 전파할 수 있음.
+- 같은 hold를 공유하는 문제들 사이의 관계를 활용함.
+- class imbalance가 있는 상황에서 high-grade problem 주변으로 정보가 전달될 가능성이 있음.
+
+한계:
+
+- graph edge가 물리적 reachability가 아니라 corpus-level co-occurrence에 기반함.
+- start/mid/end role, hold direction, hand-specific movement, foot placement는 직접적으로 사용하지 않음.
+- 개별 climbing problem 자체의 구조를 graph classification 문제로 다루지는 않음.
+
+## 2. 우리 연구의 위치
+
+우리 연구는 위 두 선행연구와 다른 방식으로 MoonBoard 문제를 graph로 구성한다.
+
+```text
+MoonBoardRNN:
+problem -> BetaMove inferred move sequence -> LSTM grade prediction
+
+MoonBoard TextGCN:
+entire dataset -> heterogeneous problem-hold corpus graph -> GCN node classification
+
+Our approach:
+single problem -> physical hold-reachability graph -> GNN graph classification
+```
+
+우리 모델에서는 하나의 climbing problem이 하나의 graph가 된다.
+
+- node: 해당 문제에 포함된 hold
+- edge: hold 사이의 spatial reachability
+- graph label: problem difficulty grade
+
+즉 우리의 핵심 차별점은 MoonBoard에 GNN을 쓴다는 사실 자체가 아니다. 이미 TextGCN-style MoonBoard GNN 연구가 있다. 차별점은 **전체 corpus graph가 아니라, 각 문제를 개별적인 physical graph로 표현한다는 것**이다.
+
+## 3. 현재 실험에서 비교하는 요소
+
+우리 실험은 graph representation의 구성 요소를 바꾸며 어떤 정보가 grade prediction에 유효한지 확인한다.
+
+node feature 후보:
+
+- `xy`: hold 위치
+- `type`: start/mid/end hold role
+- `direction`: MoonBoard 2016 hold direction
+- `difficulty`: left/right hand hold difficulty score
+- `difficulty_direction`: difficulty + direction
+
+edge construction 후보:
+
+- `spatial`: 일정 reach threshold 안에 있는 hold끼리 연결
+- `sequence`: 저장된 hold order에서 인접한 hold 연결
+- `hybrid`: spatial + sequence edge 결합
+
+training 개선 후보:
+
+- class weighting
+- rare-class handling
+- ordinal-aware metric/loss
+
+## 4. 실험 진행 로그 요약
+
+### 4.1 초기 기준 실험
+
+먼저 MoonBoardRNN과 최대한 비교 가능한 데이터 규모를 맞추기 위해 train / validation / test split 크기를 다음과 같이 설정했다.
+
+```text
+train / validation / test = 20157 / 2442 / 2497
+```
+
+초기 대표 설정은 다음과 같았다.
+
+```text
+feature_set = difficulty_direction
+edge_mode = spatial
+model = GAT
+epochs = 20
+```
+
+이 설정은 hold 위치, start/mid/end role, hold direction, left/right hand difficulty 정보를 모두 사용하고, edge는 spatial reachability로 구성한다.
+
+결과:
+
+```text
+Exact accuracy: 0.461
++/-1 accuracy: 0.800
+Macro-F1: 0.172
+```
+
+MoonBoardRNN reported result와 비교하면 exact accuracy는 근접했지만, `+/-1 accuracy`와 macro-F1은 낮았다. 따라서 이후 실험의 방향은 단순히 GNN이 동작하는지 확인하는 것이 아니라, 어떤 graph representation과 training strategy가 이 gap을 줄일 수 있는지 확인하는 쪽으로 잡았다.
+
+### 4.2 Feature / Edge Ablation
+
+다음으로 GAT encoder는 고정하고, node feature와 edge construction만 바꾸는 ablation을 진행했다. 목적은 성능 차이가 모델 구조 때문인지, graph representation 때문인지 분리해서 보기 위함이었다.
+
+테스트한 주요 조합:
+
+| Feature Set | Edge Mode | Exact | +/-1 | Macro-F1 |
+|---|---|---:|---:|---:|
+| `difficulty_direction` | `hybrid` | 0.462 | 0.792 | 0.174 |
+| `difficulty` | `spatial` | 0.455 | 0.793 | 0.167 |
+| `direction` | `spatial` | 0.414 | 0.750 | 0.139 |
+| `type` | `spatial` | 0.376 | 0.728 | 0.116 |
+| `xy` | `spatial` | 0.360 | 0.681 | 0.100 |
+
+관찰:
+
+- `xy`만 사용하는 경우는 majority baseline보다 낫지만 충분하지 않음.
+- start/mid/end type을 추가하면 성능이 개선됨.
+- hold direction은 추가적인 개선을 줌.
+- hold difficulty feature가 가장 큰 성능 향상을 줌.
+- `hybrid` edge는 exact와 macro-F1을 약간 올렸지만, `+/-1`은 spatial보다 낮았음.
+
+이 결과로부터 현재 성능의 핵심은 edge 방식보다 node feature quality에 더 크게 의존한다고 판단했다. 따라서 다음 단계에서는 edge를 더 복잡하게 만들기보다, 가장 안정적인 `difficulty_direction + spatial` 설정을 기준으로 training strategy를 개선하는 방향을 선택했다.
+
+### 4.3 Class Weighting
+
+데이터 분포를 확인하면 low-grade class가 대부분이고 high-grade class는 매우 적다. 이 때문에 exact accuracy는 어느 정도 올라가도 macro-F1이 낮게 유지될 수 있다. 따라서 class imbalance를 직접 다루기 위해 class-weighted cross entropy를 추가했다.
+
+비교 설정:
+
+```text
+feature_set = difficulty_direction
+edge_mode = spatial
+model = GAT
+```
+
+| Run | Class Weight | Exact | +/-1 | Macro-F1 |
+|---|---|---:|---:|---:|
+| `dd_spatial_unweighted` | `none` | 0.460 | 0.799 | 0.166 |
+| `dd_spatial_class_weighted` | `balanced` | 0.377 | 0.801 | 0.179 |
+
+관찰:
+
+- balanced class weighting은 macro-F1을 약간 개선함.
+- `+/-1 accuracy`는 거의 변하지 않음.
+- exact accuracy는 크게 하락함.
+
+원인:
+
+- rare class에 매우 큰 weight가 부여됨.
+- 예를 들어 class 8은 약 `61`, class 9는 약 `106`의 weight를 받음.
+- 이로 인해 rare class에 대한 감도는 올라가지만, 전체 decision boundary가 흔들릴 가능성이 있음.
+
+따라서 full balanced weighting을 최종 방식으로 채택하기는 어렵다. 대신 class imbalance가 실제 문제라는 것은 확인되었으므로, 다음 단계에서는 더 완만한 weighting 방식을 실험하는 것이 타당하다.
+
+### 4.4 현재까지의 방향성
+
+현재 실험 흐름은 다음 인과로 진행되고 있다.
+
+```text
+1. GNN baseline이 MoonBoardRNN exact accuracy에 근접함
+   -> graph formulation 자체는 의미가 있음.
+
+2. 그러나 +/-1 accuracy와 macro-F1이 낮음
+   -> 단순 정확도보다 class imbalance와 ordinal error가 문제일 가능성이 큼.
+
+3. Feature ablation에서 difficulty/direction feature가 중요함
+   -> 당분간 encoder 종류보다 graph representation과 feature 구성에 집중.
+
+4. Balanced class weighting은 macro-F1을 올리지만 exact accuracy를 크게 희생함
+   -> class imbalance handling은 필요하지만 full balanced weight는 너무 강함.
+
+5. 다음 단계는 weight strength 조절과 metric 보강
+   -> sqrt/clipped weighting, per-class F1, confusion matrix, ordinal metric 추가.
+```
+
+### 4.5 다음 실험 방향
+
+우선순위는 다음과 같다.
+
+1. `selection_metric` 추가
+   - 현재 best checkpoint는 validation `+/-1 accuracy` 기준으로 선택됨.
+   - class weighting의 목적을 고려하면 validation macro-F1 기준 선택도 비교해야 함.
+
+2. class weight 강도 조절
+   - `sqrt_balanced`
+   - `clipped_balanced`
+   - 필요하면 `log_balanced`
+
+3. 평가 metric 보강
+   - per-class precision / recall / F1
+   - confusion matrix
+   - mean absolute grade-index error
+   - within-2 accuracy
+
+4. 최종 후보 설정에서 epoch 증가
+   - 먼저 representation과 loss 설정을 고정한 뒤, epoch를 늘려 최종 성능을 확인하는 것이 효율적임.
+
+## 5. Poster에서 사용할 수 있는 짧은 설명
+
+Existing MoonBoard grade prediction methods mainly follow two directions. MoonBoardRNN first infers an expert-like move sequence using BetaMove, then applies an LSTM-based GradeNet model to predict difficulty from engineered movement features. Another GNN-based approach adapts TextGCN by constructing a global heterogeneous graph of problem and hold nodes, where edges capture hold occurrence and co-occurrence statistics.
+
+In contrast, our method treats each climbing problem as an individual graph. Holds are represented as nodes, and edges encode spatial reachability within the problem. This formulation directly models the physical structure of a climb and allows controlled experiments over node features, edge construction, and class imbalance handling.
+
+## 6. 주의해서 써야 할 점
+
+- "MoonBoard에 GNN을 처음 적용했다"고 쓰면 안 됨.
+- 정확한 novelty는 "TextGCN-style corpus graph가 아니라 per-problem physical reachability graph를 사용했다"는 점.
+- MoonBoardRNN과 성능 비교 시, RNN은 BetaMove 기반 sequence와 move-level engineered feature를 사용한다는 점을 명시해야 함.
+- 현재 우리 모델이 RNN보다 항상 우수하다고 주장하면 안 됨.
+- 현재까지의 실험은 graph representation과 imbalance handling의 효과를 분석하는 방향으로 쓰는 것이 안전함.
