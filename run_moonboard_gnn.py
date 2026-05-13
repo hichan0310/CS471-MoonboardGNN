@@ -558,8 +558,8 @@ def train_model(
         class_weights = class_weights.to(device)
     criterion = nn.CrossEntropyLoss(weight=class_weights)
     history = []
-    best_val = -1.0
-    best_state = None
+    best_scores = {"relaxed_acc": -1.0, "macro_f1": -1.0}
+    best_states = {"relaxed_acc": None, "macro_f1": None}
 
     model.to(device)
     epoch_iter = range(1, epochs + 1)
@@ -581,9 +581,10 @@ def train_model(
         val_metrics = evaluate(model, val_loader, device)
         row = {"epoch": epoch, "loss": train_loss, **{f"val_{k}": v for k, v in val_metrics.items()}}
         history.append(row)
-        if val_metrics["relaxed_acc"] > best_val:
-            best_val = val_metrics["relaxed_acc"]
-            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+        for metric_name in best_scores:
+            if val_metrics[metric_name] > best_scores[metric_name]:
+                best_scores[metric_name] = val_metrics[metric_name]
+                best_states[metric_name] = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
 
         progress_text = (
             f"loss {train_loss:.4f}, "
@@ -596,11 +597,15 @@ def train_model(
         else:
             print(f"epoch={epoch:03d} {progress_text}")
 
-    if best_state is not None:
-        model.load_state_dict(best_state)
-        model.to(device)
-    test_metrics = evaluate(model, test_loader, device)
-    return test_metrics, history
+    test_metrics_by_selection = {}
+    for metric_name, state in best_states.items():
+        if state is not None:
+            model.load_state_dict(state)
+            model.to(device)
+        test_metrics_by_selection[metric_name] = evaluate(model, test_loader, device)
+
+    test_metrics = test_metrics_by_selection["relaxed_acc"]
+    return test_metrics, history, test_metrics_by_selection
 
 
 def majority_baseline(labels: list[int], test_labels: list[int]) -> dict[str, float]:
@@ -756,7 +761,7 @@ def main() -> None:
         print("class weights:", [round(float(v), 4) for v in class_weights.tolist()])
     print("majority baseline:", majority)
 
-    test_metrics, history = train_model(
+    test_metrics, history, test_metrics_by_selection = train_model(
         model=model,
         train_loader=train_loader,
         val_loader=val_loader,
@@ -782,11 +787,13 @@ def main() -> None:
         "class_weights": None if class_weights is None else [float(v) for v in class_weights.tolist()],
         "majority_baseline": majority,
         "test_metrics": test_metrics,
+        "test_metrics_by_selection": test_metrics_by_selection,
     }
     write_json(args.output_dir / "result.json", result)
     write_json(args.output_dir / "history.json", history)
 
-    print("test metrics:", test_metrics)
+    print("test metrics selected by val +/-1:", test_metrics)
+    print("test metrics by selection:", test_metrics_by_selection)
     print(f"runtime seconds: {runtime:.3f}")
     print(f"saved: {args.output_dir / 'result.json'}")
 

@@ -81,6 +81,8 @@ The notebook saves results under `outputs_experiments/` and displays:
 - test metric comparisons across all listed experiments,
 - majority baseline and reported MoonBoardRNN GradeNet reference lines.
 
+Each `result.json` stores the default test metrics selected by validation `+/-1` accuracy and `test_metrics_by_selection`, which also includes the checkpoint selected by validation macro-F1.
+
 ## Notes
 
 Initial commit intentionally excludes generated output folders and preliminary result logs. Those can be added in later commits after the experiment setup is finalized.
