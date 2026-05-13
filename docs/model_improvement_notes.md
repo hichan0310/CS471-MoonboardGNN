@@ -52,6 +52,18 @@ Risk:
 
 This is the most reasonable next training-method improvement because MoonBoardRNN GradeNet also used class weights.
 
+Implementation note:
+
+- `run_moonboard_gnn.py` and the notebooks support `class_weight_mode`.
+- `none` keeps the original unweighted cross entropy.
+- `balanced` computes weights from the training split only:
+
+```text
+weight[class] = number_of_training_samples / (number_of_present_classes * class_count)
+```
+
+The current notebook has a single `EXPERIMENTS` list. The default list runs the same `difficulty_direction + spatial + GAT` setting twice, once with `none` and once with `balanced`, then saves `outputs_experiments/experiment_summary.json` and plots the listed results against the majority baseline and reported MoonBoardRNN GradeNet metrics. Feature/edge ablations should be added to the same list rather than run through a separate optional cell.
+
 ## Ordinal Loss
 
 MoonBoard grades are ordered labels, not purely nominal labels:

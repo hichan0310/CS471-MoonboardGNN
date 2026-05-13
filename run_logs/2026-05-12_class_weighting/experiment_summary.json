@@ -1,0 +1,26 @@
+[
+  {
+    "run": "dd_spatial_unweighted",
+    "feature_set": "difficulty_direction",
+    "edge_mode": "spatial",
+    "model": "gat",
+    "class_weight_mode": "none",
+    "exact": 0.460152182619143,
+    "+/-1": 0.7985582699239087,
+    "macro_f1": 0.16610806398555278,
+    "runtime_seconds": 209.4216388299999,
+    "output_dir": "outputs_experiments/dd_spatial_unweighted"
+  },
+  {
+    "run": "dd_spatial_class_weighted",
+    "feature_set": "difficulty_direction",
+    "edge_mode": "spatial",
+    "model": "gat",
+    "class_weight_mode": "balanced",
+    "exact": 0.37725270324389265,
+    "+/-1": 0.8005606728073689,
+    "macro_f1": 0.1793379207608831,
+    "runtime_seconds": 184.86509025099986,
+    "output_dir": "outputs_experiments/dd_spatial_class_weighted"
+  }
+]
