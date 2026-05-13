@@ -614,6 +614,34 @@ def majority_baseline(labels: list[int], test_labels: list[int]) -> dict[str, fl
     }
 
 
+def sample_train_indices(
+    labels: list[int],
+    train_idx: np.ndarray,
+    mode: str,
+    samples_per_class: int,
+    seed: int,
+) -> np.ndarray:
+    if mode == "none":
+        return train_idx
+    if mode != "balanced_replacement":
+        raise ValueError(f"unknown train sampling mode: {mode}")
+
+    rng = np.random.default_rng(seed)
+    by_class: dict[int, list[int]] = {}
+    for idx in train_idx:
+        by_class.setdefault(labels[int(idx)], []).append(int(idx))
+
+    if samples_per_class <= 0:
+        samples_per_class = max(len(indices) for indices in by_class.values())
+
+    sampled: list[int] = []
+    for label in sorted(by_class):
+        pool = np.array(by_class[label], dtype=np.int64)
+        sampled.extend(rng.choice(pool, size=samples_per_class, replace=True).tolist())
+    rng.shuffle(sampled)
+    return np.array(sampled, dtype=np.int64)
+
+
 def write_json(path: Path, value) -> None:
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -649,6 +677,8 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--hidden", type=int, default=64)
     parser.add_argument("--lr", type=float, default=0.005)
+    parser.add_argument("--train-sampling-mode", choices=["none", "balanced_replacement"], default="none")
+    parser.add_argument("--train-samples-per-class", type=int, default=2000)
     parser.add_argument(
         "--class-weight-mode",
         choices=["none", "balanced", "moonboardrnn_v1", "moonboardrnn_v2"],
@@ -678,6 +708,14 @@ def main() -> None:
         random_state=args.seed,
         stratify=[labels[i] for i in train_val_idx],
     )
+    train_idx_original = np.array(train_idx, dtype=np.int64)
+    train_idx = sample_train_indices(
+        labels=labels,
+        train_idx=train_idx_original,
+        mode=args.train_sampling_mode,
+        samples_per_class=args.train_samples_per_class,
+        seed=args.seed,
+    )
 
     graphs = [
         problem_to_graph(
@@ -706,11 +744,13 @@ def main() -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     class_weights = compute_class_weights([labels[i] for i in train_idx], num_classes, args.class_weight_mode)
 
-    majority = majority_baseline([labels[i] for i in train_idx], [labels[i] for i in test_idx])
+    majority = majority_baseline([labels[i] for i in train_idx_original], [labels[i] for i in test_idx])
     print("config:", vars(args))
     print("device:", device)
     print("num problems:", len(problems))
     print("label distribution:", dict(sorted(Counter(labels).items())))
+    print("original train label distribution:", dict(sorted(Counter(labels[i] for i in train_idx_original).items())))
+    print("effective train label distribution:", dict(sorted(Counter(labels[i] for i in train_idx).items())))
     print("node features:", in_channels)
     if class_weights is not None:
         print("class weights:", [round(float(v), 4) for v in class_weights.tolist()])
@@ -733,6 +773,10 @@ def main() -> None:
         "runtime_seconds": runtime,
         "num_problems": len(problems),
         "label_distribution": dict(sorted(Counter(labels).items())),
+        "original_train_size": int(len(train_idx_original)),
+        "effective_train_size": int(len(train_idx)),
+        "original_train_label_distribution": dict(sorted(Counter(labels[i] for i in train_idx_original).items())),
+        "effective_train_label_distribution": dict(sorted(Counter(labels[i] for i in train_idx).items())),
         "node_features": in_channels,
         "class_weight_mode": args.class_weight_mode,
         "class_weights": None if class_weights is None else [float(v) for v in class_weights.tolist()],

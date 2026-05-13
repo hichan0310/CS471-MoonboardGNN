@@ -66,12 +66,14 @@ The main interpretation should answer:
 
 The current notebook uses one `EXPERIMENTS` list as the only experiment coverage definition. In Colab or Jupyter, run all cells to execute every listed case and generate the summary table and plots.
 
-The default list is a class-weighting comparison for the same `difficulty_direction + spatial + GAT` model:
+The default list compares imbalance-handling strategies for the same `difficulty_direction + spatial + GAT` model:
 
 - `unweighted`: original cross entropy loss.
 - `class_weighted`: balanced cross entropy using weights computed from the training split.
+- `moonboardrnn_v1` / `moonboardrnn_v2`: hand-tuned class weights used as MoonBoardRNN-inspired settings.
+- `balanced_replacement`: MoonGen-style train-set sampling with replacement, using `train_samples_per_class`.
 
-To run feature/edge ablations, edit `EXPERIMENTS` instead of using a separate ablation cell.
+To run feature/edge ablations or change the sampling coverage, edit `EXPERIMENTS` instead of using a separate ablation cell.
 
 The notebook saves results under `outputs_experiments/` and displays:
 
