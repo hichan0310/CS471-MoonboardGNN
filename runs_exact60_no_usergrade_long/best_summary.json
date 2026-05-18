@@ -1,0 +1,20 @@
+{
+  "model": "extra_trees500_no_usergrade",
+  "exact_acc": 0.5248203788373612,
+  "micro_f1": 0.5248203788373612,
+  "relaxed_acc": 0.8546701502286087,
+  "within2_acc": 0.9503592423252776,
+  "macro_f1": 0.2527386792513334,
+  "weighted_f1": 0.49922553195180486,
+  "mse_argmax": 1.2854343566296538,
+  "mae_argmax": 0.6858262573481385,
+  "rare_f1_5_9": 0.07624008018612008,
+  "rare_recall_5_9": 0.04778261570714401,
+  "rare_precision_5_9": 0.20496894409937888,
+  "mse_expected": 0.9814990210046453,
+  "mae_expected": 0.7272494879018362,
+  "val_exact": NaN,
+  "members": NaN,
+  "weights": NaN,
+  "target_exact_met": false
+}

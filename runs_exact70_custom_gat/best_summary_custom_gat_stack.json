@@ -1,0 +1,21 @@
+{
+  "model": "val_logistic_stack_C0.7",
+  "exact_acc": 0.6069562377531026,
+  "micro_f1": 0.6069562377531026,
+  "relaxed_acc": 0.8922273024167211,
+  "within2_acc": 0.9691378184193338,
+  "macro_f1": 0.3551691866710579,
+  "weighted_f1": 0.5967531321834569,
+  "mse_argmax": 0.9985303723056825,
+  "mae_argmax": 0.5468647942521228,
+  "rare_f1_5_9": 0.173203007518797,
+  "rare_recall_5_9": 0.13846153846153847,
+  "rare_precision_5_9": 0.2351449275362319,
+  "mse_expected": 0.7740417710788478,
+  "mae_expected": 0.5596086305304733,
+  "epoch": NaN,
+  "val_exact": NaN,
+  "members": NaN,
+  "weights": NaN,
+  "target_exact_met": false
+}

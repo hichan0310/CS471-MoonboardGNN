@@ -1,0 +1,18 @@
+{
+  "model": "meta_plus_lp_w0.6",
+  "exact_acc": 0.531352057478772,
+  "micro_f1": 0.531352057478772,
+  "relaxed_acc": 0.8692031352057479,
+  "within2_acc": 0.9609732201175702,
+  "macro_f1": 0.2943381644697148,
+  "weighted_f1": 0.5183662344356913,
+  "mse_argmax": 1.1616590463749183,
+  "mae_argmax": 0.6518615284128021,
+  "rare_f1_5_9": 0.13805047612053561,
+  "rare_recall_5_9": 0.10530559587163361,
+  "rare_precision_5_9": 0.2097222222222222,
+  "mse_expected": 0.9092624469738653,
+  "mae_expected": 0.690829095821951,
+  "oof_exact": NaN,
+  "target_exact_met": false
+}
