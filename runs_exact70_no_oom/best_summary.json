@@ -1,0 +1,20 @@
+{
+  "model": "random_exact_ensemble",
+  "exact_acc": 0.606629653821032,
+  "micro_f1": 0.606629653821032,
+  "relaxed_acc": 0.8896146309601568,
+  "within2_acc": 0.9666884389288047,
+  "macro_f1": 0.3486801605224108,
+  "weighted_f1": 0.5957432579543583,
+  "mse_argmax": 1.0062050947093404,
+  "mae_argmax": 0.5512736773350752,
+  "rare_f1_5_9": 0.16076368076368078,
+  "rare_recall_5_9": 0.12373810675697468,
+  "rare_precision_5_9": 0.22976097348978705,
+  "mse_expected": 0.7940130063069584,
+  "mae_expected": 0.5664579267591849,
+  "members": "sgd_log_alpha0.0003;val_logistic_stack",
+  "weights": "0.0627;0.9373",
+  "val_exact": 0.6389058991630945,
+  "target_exact_met": false
+}

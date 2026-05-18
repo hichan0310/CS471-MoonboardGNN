@@ -1,0 +1,22 @@
+{
+  "model": "oof_candidate_reranker",
+  "val_exact": 0.6093080220453154,
+  "exact_acc": 0.5929131286740692,
+  "micro_f1": 0.5929131286740692,
+  "relaxed_acc": 0.8806335728282169,
+  "within2_acc": 0.9629327237099935,
+  "macro_f1": 0.3575556023826374,
+  "weighted_f1": 0.5914155621410512,
+  "mse_argmax": 1.064990202482038,
+  "mae_argmax": 0.577726975832789,
+  "rare_f1_5_9": 0.1797223940081083,
+  "rare_recall_5_9": 0.15463151104660539,
+  "rare_precision_5_9": 0.21926900584795322,
+  "mse_expected": 0.8666990844327818,
+  "mae_expected": 0.5900270132517694,
+  "target_exact_met": false,
+  "user_grade_present_n": 1812,
+  "user_grade_present_exact": 0.9150110375275938,
+  "user_grade_missing_n": 4312,
+  "user_grade_missing_exact": 0.45640074211502785
+}

@@ -1,0 +1,22 @@
+{
+  "base_script": "moonboard_exact70_no_oom_hard_metadata.py",
+  "data": "moonGen_scrape_2016_final",
+  "out": "runs_exact70_cascade_reranker_long",
+  "seed": 471,
+  "max_samples": null,
+  "pair_hash_dim": 16384,
+  "folds": 5,
+  "hgb_iters": 900,
+  "rank_iters": 700,
+  "ranker_type": "hgb",
+  "bias_trials": 150000,
+  "knn_k": [
+    3,
+    5,
+    11,
+    25,
+    51
+  ],
+  "hard_user_grade": true,
+  "target_exact": 0.7
+}

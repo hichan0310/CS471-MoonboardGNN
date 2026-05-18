@@ -1,0 +1,31 @@
+{
+  "data": "moonGen_scrape_2016_final",
+  "left_csv": "HoldFeature2016LeftHand.csv",
+  "right_csv": "HoldFeature2016RightHand.csv",
+  "out": "runs_max_exact",
+  "seed": 471,
+  "max_samples": null,
+  "test_size": 0.2,
+  "val_size_in_trainval": 0.2,
+  "reach_threshold": 0.4,
+  "alpha": 8.0,
+  "epochs": 150,
+  "batch_size": 128,
+  "hidden": 128,
+  "dropout": 0.25,
+  "lr": 0.002,
+  "weight_decay": 0.0001,
+  "ordinal_weight": 0.05,
+  "class_weight": "sqrt",
+  "device": "cuda",
+  "models": [
+    "tab_mlp",
+    "hybrid_gine",
+    "hybrid_gatv2",
+    "hybrid_transformer"
+  ],
+  "ensemble_trials": 2500,
+  "ensemble_max_models": 5,
+  "min_gnn_ensemble_weight": 0.1,
+  "target_exact": 0.7
+}

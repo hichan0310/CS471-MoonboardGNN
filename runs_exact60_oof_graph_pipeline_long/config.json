@@ -1,0 +1,27 @@
+{
+  "helper_script": "moonboard_exact60_no_usergrade_stack.py",
+  "base_script": "moonboard_exact70_no_oom_hard_metadata.py",
+  "data": "moonGen_scrape_2016_final",
+  "out": "runs_exact60_oof_graph_pipeline_long",
+  "seed": 471,
+  "target_exact": 0.6,
+  "max_samples": null,
+  "folds": 7,
+  "pair_hash_dim": 16384,
+  "setter_hash_dim": 4096,
+  "svd_dim": 512,
+  "hgb_iters": 1200,
+  "extra_trees_estimators": 1500,
+  "knn_k": [
+    3,
+    5,
+    11,
+    25,
+    51
+  ],
+  "bias_trials": 120000,
+  "lp_k": 35,
+  "lp_alpha": 0.9,
+  "lp_iters": 50,
+  "skip_slow": false
+}

@@ -1,0 +1,22 @@
+{
+  "model": "val_meta_C0.15_bias",
+  "val_exact": 0.5660338844662176,
+  "exact_acc": 0.5377204441541477,
+  "micro_f1": 0.5377204441541477,
+  "relaxed_acc": 0.8827563683866754,
+  "within2_acc": 0.9688112344872633,
+  "macro_f1": 0.2621704898180399,
+  "weighted_f1": 0.5197914706395232,
+  "mse_argmax": 1.0550293925538863,
+  "mae_argmax": 0.6213259307642064,
+  "rare_f1_5_9": 0.06441880883859324,
+  "rare_recall_5_9": 0.03995323334945977,
+  "rare_precision_5_9": 0.23409563409563408,
+  "mse_expected": 0.8610375346818362,
+  "mae_expected": 0.6556300859392056,
+  "epoch": NaN,
+  "bias_val_exact": 0.5688916105327618,
+  "members": NaN,
+  "weights": NaN,
+  "target_exact_met": false
+}
