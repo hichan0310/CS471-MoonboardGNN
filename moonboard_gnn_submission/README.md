@@ -5,8 +5,11 @@ This folder contains a reproducible research-project package for predicting Moon
 ## Files
 
 - `moonboard_gnn_reproducible_experiment.ipynb`
-  - Main reproducible notebook.
+  - Original reproducible notebook for the earlier vanilla GAT experiments.
   - Contains dataset checks, graph construction, GNN model code, training, evaluation, and ablation templates.
+- `edge_aware_gat_reproducible_experiment.ipynb`
+  - Focused submission notebook for the final edge-aware GAT model.
+  - Trains only the custom edge-aware GAT branch, without KNN/classical ML/meta-stacking ensembles.
 - `moonGen_scrape_2016_final`
   - MoonBoardRNN raw MoonBoard 2016 dataset copied from `jrchang612/MoonBoardRNN`.
 - `HoldFeature2016LeftHand.csv`
@@ -34,7 +37,16 @@ The previous local experiment environment used:
 - `numpy 2.2.6`
 - `pandas 2.3.3`
 
-## How to Reproduce
+## How to Reproduce the Edge-Aware GAT Result
+
+1. Open `edge_aware_gat_reproducible_experiment.ipynb`.
+2. Confirm `moonGen_scrape_2016_final` exists in the same folder.
+3. Run all cells.
+4. The notebook writes `runs_edge_aware_gat_only/edge_aware_gat_only_leaderboard.csv` and `runs_edge_aware_gat_only/edge_aware_gat_only_best_summary.json`.
+
+The focused notebook uses each MoonBoard problem as a directed hold graph, adds edge attributes for movement geometry and train-only relation statistics, and trains a custom edge-aware GAT classifier.
+
+## How to Reproduce the Earlier Vanilla GAT Experiments
 
 1. Open `moonboard_gnn_reproducible_experiment.ipynb`.
 2. Run the dataset check cell.
